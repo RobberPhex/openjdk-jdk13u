@@ -153,7 +153,12 @@ template <> void DCmdArgument<bool>::parse_value(const char* str,
       ResourceMark rm;
 
       char* buf = NEW_RESOURCE_ARRAY(char, len + 1);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
       strncpy(buf, str, len);
+#pragma GCC diagnostic pop
+
       buf[len] = '\0';
       Exceptions::fthrow(THREAD_AND_LOCATION, vmSymbols::java_lang_IllegalArgumentException(),
         "Boolean parsing error in command argument '%s'. Could not parse: %s.\n", _name, buf);
