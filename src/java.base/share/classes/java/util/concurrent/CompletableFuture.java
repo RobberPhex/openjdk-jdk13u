@@ -37,6 +37,8 @@ package java.util.concurrent;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -1501,7 +1503,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     /** Recursively constructs a tree of completions. */
-    static CompletableFuture<Void> andTree(CompletableFuture<?>[] cfs,
+    static CompletableFuture<Void> andTree(List<? extends CompletableFuture<?>> cfs,
                                            int lo, int hi) {
         CompletableFuture<Void> d = new CompletableFuture<Void>();
         if (lo > hi) // empty
@@ -1509,9 +1511,9 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
         else {
             CompletableFuture<?> a, b; Object r, s, z; Throwable x;
             int mid = (lo + hi) >>> 1;
-            if ((a = (lo == mid ? cfs[lo] :
+            if ((a = (lo == mid ? cfs.get(lo) :
                       andTree(cfs, lo, mid))) == null ||
-                (b = (lo == hi ? a : (hi == mid+1) ? cfs[hi] :
+                (b = (lo == hi ? a : (hi == mid+1) ? cfs.get(hi) :
                       andTree(cfs, mid+1, hi))) == null)
                 throw new NullPointerException();
             if ((r = a.result) == null || (s = b.result) == null)
@@ -2413,7 +2415,34 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
      * {@code null}
      */
     public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs) {
-        return andTree(cfs, 0, cfs.length - 1);
+        return allOf(Arrays.asList(cfs));
+    }
+
+    /**
+     * Returns a new CompletableFuture that is completed when all of
+     * the given CompletableFutures complete.  If any of the given
+     * CompletableFutures complete exceptionally, then the returned
+     * CompletableFuture also does so, with a CompletionException
+     * holding this exception as its cause.  Otherwise, the results,
+     * if any, of the given CompletableFutures are not reflected in
+     * the returned CompletableFuture, but may be obtained by
+     * inspecting them individually. If no CompletableFutures are
+     * provided, returns a CompletableFuture completed with the value
+     * {@code null}.
+     *
+     * <p>Among the applications of this method is to await completion
+     * of a set of independent CompletableFutures before continuing a
+     * program, as in: {@code CompletableFuture.allOf(c1, c2,
+     * c3).join();}.
+     *
+     * @param cfs List of CompletableFutures
+     * @return a new CompletableFuture that is completed when all of the
+     * given CompletableFutures complete
+     * @throws NullPointerException if the array or any of its elements are
+     * {@code null}
+     */
+    public static CompletableFuture<Void> allOf(List<? extends CompletableFuture<?>> cfs) {
+        return andTree(cfs, 0, cfs.size() - 1);
     }
 
     /**
